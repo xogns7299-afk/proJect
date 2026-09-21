@@ -1,0 +1,25 @@
+# 빌드 결과
+dist/
+
+# 의존성
+node_modules/
+.wrangler/
+
+# 비밀값 — 절대 커밋하지 않는다
+.env
+.env.*
+.dev.vars
+
+# 로그
+logs/
+*.log
+
+# 편집기·OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 목업 초안: 팀 합의 전이라 공개하지 않는다. 확정되면 아래 두 줄을 지운다.
+mockup/*
+!mockup/.gitkeep

@@ -1,0 +1,12 @@
+body {
+  margin: 0;
+  font-family: 'Pretendard', 'Malgun Gothic', system-ui, sans-serif;
+  background: #f6f7f9;
+  color: #1f2430;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
