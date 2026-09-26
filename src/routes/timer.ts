@@ -102,14 +102,20 @@ async function finalize(db: D1Database, userId: number, s: Active, now: number) 
   }
 }
 
-// 진행 중인 타이머를 돌려준다. 8시간을 넘겼으면 그 자리에서 자동 종료하고 결과를 autoStopped로 알린다.
+// 공부시간이 8시간을 넘긴 타이머는 일시정지 중이어도 요청이 오는 그 자리에서 8시간으로 확정한다
+async function stopIfOverLimit(db: D1Database, userId: number, now: number) {
+  const active = await findActive(db, userId)
+  if (!active || times(active, now).elapsedSec < MAX_SESSION_SEC) return null
+  return finalize(db, userId, active, now)
+}
+
+// 진행 중인 타이머를 돌려준다. 8시간을 넘겼으면 자동 종료하고 결과를 autoStopped로 한 번 알린다.
 timer.get('/', async (c) => {
   const user = c.get('user')
   const now = Date.now()
+  const autoStopped = await stopIfOverLimit(c.env.DB, user.id, now)
+  if (autoStopped) return c.json({ timer: null, autoStopped, now })
   const active = await findActive(c.env.DB, user.id)
-  if (active && active.status === 'running' && times(active, now).elapsedSec >= MAX_SESSION_SEC) {
-    return c.json({ timer: null, autoStopped: await finalize(c.env.DB, user.id, active, now), now })
-  }
   return c.json({ timer: active && view(active, now), now })
 })
 
@@ -141,6 +147,8 @@ timer.post('/start', async (c) => {
 
 timer.post('/pause', async (c) => {
   const now = Date.now()
+  const autoStopped = await stopIfOverLimit(c.env.DB, c.get('user').id, now)
+  if (autoStopped) return c.json({ timer: null, autoStopped, now })
   await c.env.DB.prepare(
     `UPDATE study_sessions SET status = 'paused', paused_at = ?, pause_count = pause_count + 1 WHERE user_id = ? AND status = 'running'`
   )
@@ -152,6 +160,8 @@ timer.post('/pause', async (c) => {
 
 timer.post('/resume', async (c) => {
   const now = Date.now()
+  const autoStopped = await stopIfOverLimit(c.env.DB, c.get('user').id, now)
+  if (autoStopped) return c.json({ timer: null, autoStopped, now })
   await c.env.DB.prepare(
     `UPDATE study_sessions
      SET status = 'running', paused_total_sec = paused_total_sec + CAST((? - paused_at) / 1000 AS INTEGER), paused_at = NULL

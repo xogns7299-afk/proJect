@@ -12,6 +12,10 @@
   --accent-text: #ffffff;
   --accent-soft: #fcefdf;
   --danger: #d94a3d;
+  /* 글자 대비 4.5 이상: 빨간 버튼, 알림 속 강조 글자 */
+  --danger-btn: #c53d31;
+  --danger-btn-text: #ffffff;
+  --toast-accent: #d9822b;
   --success: #2e9e5b;
   --warn: #8a5a0d;
   --warn-soft: #f8ecd5;
@@ -33,6 +37,9 @@
   --accent-text: #1f1508;
   --accent-soft: #3d2a14;
   --danger: #ff7a6b;
+  --danger-btn: #ff7a6b;
+  --danger-btn-text: #2a0d08;
+  --toast-accent: #9a4a0c;
   --success: #5ccf86;
   --warn: #e0ab5c;
   --warn-soft: #332714;
@@ -115,8 +122,8 @@ main.view { max-width: 1160px; margin: 0 auto; padding: 4px 40px 56px; }
 .btn:hover:not(:disabled) { background: var(--hover); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 700; }
 .btn.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.06); }
-.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 700; }
-.btn.danger:hover:not(:disabled) { background: var(--danger); filter: brightness(1.06); }
+.btn.danger { background: var(--danger-btn); border-color: var(--danger-btn); color: var(--danger-btn-text); font-weight: 700; }
+.btn.danger:hover:not(:disabled) { background: var(--danger-btn); filter: brightness(1.06); }
 .btn.big { width: 100%; padding: 14px; font-size: 16px; border-radius: 14px; }
 .btn.icon { border: 0; background: none; padding: 6px 8px; font-size: 18px; }
 .btn.icon:hover:not(:disabled) { background: var(--hover); }
@@ -173,7 +180,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); animation: toast-in 0.25s ease-out;
 }
 .toast .avatar { width: 30px; height: 30px; margin-left: -10px; }
-.toast .plus { color: var(--accent); }
+.toast .plus { color: var(--toast-accent); }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
 
 /* ---------- 로그인·가입 ---------- */

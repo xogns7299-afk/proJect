@@ -112,8 +112,16 @@ async function start() {
     return renderAuth(root, start)
   }
   drawShell()
-  // 다른 화면에 있어도 진행 중인 타이머가 보이도록 한 번 읽어 둔다
-  api.get('/timer').then((res) => setLive(res.timer)).catch(() => {})
+  // 홈이 아닌 화면에서도 진행 중인 타이머가 보이도록 한 번 읽어 둔다. 홈은 스스로 읽는다.
+  // 8시간을 넘겨 자동 종료된 결과는 서버가 한 번만 알려주므로 여기서 받으면 바로 회고 화면을 띄운다.
+  if (currentRoute() !== 'home')
+    api
+      .get('/timer')
+      .then((res) => {
+        setLive(res.timer)
+        if (res.autoStopped) openTimer(ctx, () => drawShell(), res)
+      })
+      .catch(() => {})
 }
 
 window.addEventListener('hashchange', () => ctx.me && drawShell())

@@ -38,6 +38,8 @@ export async function openTimer(ctx, onClose, initial) {
   let closed = false
   let running = null // { timer, at } — 서버 값과 그 값을 받은 순간
   let memoDraft = ''
+  let finished = false // 회고·완료 단계에서는 서버 상태를 다시 읽어 화면을 바꾸지 않는다
+  let refreshing = null
 
   const onVisible = () => !document.hidden && running && refresh()
   document.addEventListener('visibilitychange', onVisible)
@@ -124,7 +126,8 @@ export async function openTimer(ctx, onClose, initial) {
       })
     }
     $('[data-start]', screen).onclick = async (e) => {
-      e.currentTarget.disabled = true
+      const btn = e.currentTarget // await 뒤에는 e.currentTarget 이 null 이 된다
+      btn.disabled = true
       try {
         const res = await api.post('/timer/start', { subjectId: selectedId, memo: memoDraft })
         showRun(res.timer)
@@ -132,7 +135,7 @@ export async function openTimer(ctx, onClose, initial) {
         // 다른 탭·기기에서 이미 시작한 경우 등: 서버 상태를 다시 읽어 맞춘다
         if (err.status === 409) return refresh()
         $('.error', screen).textContent = err.message
-        e.currentTarget.disabled = false
+        btn.disabled = false
       }
     }
   }
@@ -189,8 +192,11 @@ export async function openTimer(ctx, onClose, initial) {
       $('[data-elapsed]', screen).textContent = fmtClock(Math.min(t.elapsed, timer.maxSec))
       $('[data-total]', screen).textContent = fmtClock(t.total)
       $('[data-rest]', screen).textContent = fmtClock(t.rest)
-      // 8시간을 채우면 서버가 자동으로 종료한다
-      if (t.elapsed >= timer.maxSec) refresh()
+      // 8시간을 채우면 서버가 자동으로 종료한다 (결과를 한 번만 받아 회고로 넘어간다)
+      if (t.elapsed >= timer.maxSec) {
+        clearInterval(tick)
+        refresh()
+      }
     }
     clearInterval(tick)
     tick = setInterval(paint, 500)
@@ -200,14 +206,17 @@ export async function openTimer(ctx, onClose, initial) {
     sync = setInterval(refresh, 30000)
 
     $('[data-pause]', screen).onclick = async (e) => {
-      e.currentTarget.disabled = true
+      const btn = e.currentTarget
+      btn.disabled = true
       try {
         const res = await api.post(paused ? '/timer/resume' : '/timer/pause')
+        // 8시간을 넘긴 상태였다면 서버가 그 자리에서 종료하고 결과를 준다
+        if (res.autoStopped) return afterStop(res.autoStopped)
         showRun(res.timer)
       } catch (err) {
         if (err.status === 409) return refresh()
         $('.error', screen).textContent = err.message
-        e.currentTarget.disabled = false
+        btn.disabled = false
       }
     }
     $('[data-stop]', screen).onclick = () => confirmStop()
@@ -243,10 +252,15 @@ export async function openTimer(ctx, onClose, initial) {
     }
   }
 
-  async function refresh() {
-    if (closed) return
+  // 여러 곳(8시간 도달, 30초 동기화, 탭 복귀)에서 불러도 요청은 한 번만 보낸다
+  function refresh() {
+    refreshing ||= load().finally(() => (refreshing = null))
+    return refreshing
+  }
+  async function load() {
+    if (closed || finished) return
     const res = await api.get('/timer')
-    if (closed) return
+    if (closed || finished) return
     if (res.autoStopped) return afterStop(res.autoStopped)
     if (res.timer) return showRun(res.timer)
     setLive(null)
@@ -255,6 +269,7 @@ export async function openTimer(ctx, onClose, initial) {
   }
 
   function afterStop(res) {
+    finished = true
     clearInterval(tick)
     clearInterval(sync)
     running = null

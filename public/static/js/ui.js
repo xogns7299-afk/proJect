@@ -42,9 +42,14 @@ export function openModal(html, onClose) {
   bg.className = 'modal-bg'
   bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><button type="button" class="modal-close" aria-label="닫기">×</button>${html}</div>`
   const close = () => closeLayer(bg)
+  // 안에서 누른 채 끌어 바깥에서 떼도 click은 바깥에서 난 것으로 잡힌다. 누른 곳도 바깥일 때만 닫는다
+  let downOutside = false
+  bg.onmousedown = (e) => {
+    downOutside = e.target === bg
+  }
   // 값을 반환하지 않는다: onclick이 false를 반환하면 브라우저가 기본 동작(폼 제출)을 취소한다
   bg.onclick = (e) => {
-    if (e.target === bg) close()
+    if (downOutside && e.target === bg) close()
   }
   $('.modal-close', bg).onclick = close
   pushLayer(bg, onClose)

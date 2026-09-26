@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { createMiddleware } from 'hono/factory'
 import { type Ctx, type Env, body, fail, idParam, text } from '../lib/app'
 import { MAX_SESSION_SEC, levelOf } from '../lib/rules'
-import { addDays, isDate, kstDate, weekStart } from '../lib/time'
+import { addDays, badDate, isDate, kstDate, weekStart } from '../lib/time'
 
 const studies = new Hono<Env>()
 
@@ -187,6 +187,7 @@ studies.delete('/:id/comments/:commentId', requireMember, async (c) => {
 
 // 멤버 한 명의 이번 주 목표
 studies.get('/:id/members/:userId/goals', requireMember, async (c) => {
+  if (badDate(c.req.query('week'))) return fail(c, 400, '날짜가 올바르지 않습니다')
   const week = weekStart(isDate(c.req.query('week')) ? c.req.query('week') : undefined)
   const { results } = await c.env.DB.prepare(
     `SELECT g.id, g.title, g.done FROM weekly_goal_items g

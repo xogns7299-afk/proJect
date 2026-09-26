@@ -102,6 +102,11 @@ backdate(long2.id, 10 * 3600)
 const auto = (await C('GET', '/timer')).body
 check('방치된 타이머는 조회 시 자동 종료되고 결과를 알려줌', auto.timer === null && auto.autoStopped?.capped === true && auto.autoStopped.record.durationSec === 8 * 3600)
 check('자동 종료 후에는 진행 중 타이머 없음', (await C('GET', '/timer')).body.timer === null && (await C('GET', '/records')).body.length === 2)
+const long3 = (await C('POST', '/timer/start', { subjectId: subC.id })).body.timer
+await C('POST', '/timer/pause')
+backdate(long3.id, 9 * 3600)
+const auto2 = (await C('GET', '/timer')).body
+check('일시정지 중이어도 8시간을 넘기면 자동 종료', auto2.timer === null && auto2.autoStopped?.record.durationSec === 8 * 3600)
 // 뒤의 스터디 검증에 영향을 주지 않도록 C의 기록은 지운다
 for (const r of (await C('GET', '/records')).body) await C('DELETE', `/records/${r.id}`)
 
@@ -119,6 +124,19 @@ await A('PATCH', `/goals/${goal.id}`, { done: true })
 const lastWeek = new Date(Date.now() + 9 * 3600e3 - 7 * 86400e3).toISOString().slice(0, 10)
 check('지난 주 목표 조회 가능', (await A('GET', `/goals?week=${lastWeek}`)).status === 200)
 check('지난 주에 목표 추가 → 400', (await A('POST', '/goals', { title: 'x', week: lastWeek })).status === 400)
+check('없는 날짜 → 400 (서버 오류 아님)', (await A('GET', '/goals?week=2026-13-01')).status === 400 && (await A('POST', '/events', { title: 'x', date: '2026-02-30' })).status === 400)
+const futureGoal = (await A('POST', '/goals', { title: 'future', week: '2030-01-07' })).body
+const xpBeforeFuture = (await A('GET', '/auth/me')).body.xp
+const futureRes = (await A('PATCH', `/goals/${futureGoal.id}`, { done: true })).body
+check('이번 주가 아닌 목표는 체크해도 경험치 없음', futureRes.xpGranted === false && futureRes.xp === xpBeforeFuture)
+// 이미 1개가 경험치를 받은 상태에서 10개를 더 체크하면 9개만 받는다
+const extraGoals = []
+for (let i = 0; i < 10; i++) extraGoals.push((await A('POST', '/goals', { title: `g${i}` })).body)
+const granted = []
+for (const g of extraGoals) granted.push((await A('PATCH', `/goals/${g.id}`, { done: true })).body.xpGranted)
+check('목표 경험치는 한 주에 10개까지', granted.filter(Boolean).length === 9 && granted.at(-1) === false, granted.join())
+// 뒤의 목표 개수·달성률 검증에 영향을 주지 않도록 지운다
+for (const g of [futureGoal, ...extraGoals]) await A('DELETE', `/goals/${g.id}`)
 
 console.log('\n할 일 · 개인 일정 (본인만)')
 const todo = (await A('POST', '/todos', { title: '도서관 책 반납' })).body

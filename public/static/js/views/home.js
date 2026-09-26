@@ -146,7 +146,7 @@ export async function renderHome(main, ctx, week = 0) {
           if (res.level > me.level) {
             toast(`<span class="avatar">${avatarOf(me.characterId)}</span>레벨 업! Lv.${res.level}`, 3000)
           } else if (box.checked) {
-            toast(`<span class="plus">+30 XP</span> 목표 달성!`)
+            toast(res.xpGranted ? `<span class="plus">+30 XP</span> 목표 달성!` : '목표 달성! (경험치는 한 주에 목표 10개까지)')
           }
           await redraw()
           if (res.level > me.level) $('[data-pet]', main)?.classList.add('pop')

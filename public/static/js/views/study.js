@@ -115,9 +115,10 @@ export async function renderStudy(main) {
     $$('[data-comments-toggle]', body).forEach((btn) => (btn.onclick = () => toggleComments(btn, study.myId)))
 
     $('[data-copy]', body).onclick = async (e) => {
+      const btn = e.currentTarget // await 뒤에는 e.currentTarget 이 null 이 된다
       try {
         await navigator.clipboard.writeText(study.inviteCode)
-        e.currentTarget.textContent = '복사됨'
+        btn.textContent = '복사됨'
       } catch {
         prompt('초대 코드를 복사하세요', study.inviteCode)
       }

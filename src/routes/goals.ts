@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { type Env, body, fail, idParam, text } from '../lib/app'
-import { XP_GOAL_ITEM } from '../lib/rules'
-import { isDate, weekStart } from '../lib/time'
+import { XP_GOAL_ITEM, XP_GOAL_WEEKLY_MAX } from '../lib/rules'
+import { badDate, isDate, weekStart } from '../lib/time'
 import { grantXp, revokeXp, xpSummary } from '../lib/xp'
 
 const goals = new Hono<Env>()
@@ -12,6 +12,7 @@ const weekOf = (v: unknown) => weekStart(isDate(v) ? v : undefined)
 const PAST_WEEK = '지난 주 목표는 바꿀 수 없습니다'
 
 goals.get('/', async (c) => {
+  if (badDate(c.req.query('week'))) return fail(c, 400, '날짜가 올바르지 않습니다')
   const week = weekOf(c.req.query('week'))
   const { results } = await c.env.DB.prepare(
     'SELECT id, title, done FROM weekly_goal_items WHERE user_id = ? AND week_start = ? ORDER BY id'
@@ -30,6 +31,7 @@ goals.post('/', async (c) => {
   const data = await body(c)
   const title = text(data.title, 100)
   if (!title) return fail(c, 400, '목표를 입력해 주세요')
+  if (badDate(data.week)) return fail(c, 400, '날짜가 올바르지 않습니다')
   const week = weekOf(data.week)
   if (week < weekStart()) return fail(c, 400, PAST_WEEK)
   const result = await c.env.DB.prepare('INSERT INTO weekly_goal_items (user_id, week_start, title) VALUES (?, ?, ?)')
@@ -60,11 +62,23 @@ goals.patch('/:id', async (c) => {
       id
     ),
   ]
-  // 완료하면 경험치 지급, 체크를 해제하면 회수
-  if (done && !item.done) statements.push(grantXp(c.env.DB, user.id, 'weekly_goal', id, XP_GOAL_ITEM))
+  // 완료하면 경험치 지급(이번 주 목표만, 한 주에 XP_GOAL_WEEKLY_MAX개까지), 체크를 해제하면 회수
+  let xpGranted = false
+  if (done && !item.done && item.week_start === weekStart()) {
+    const given = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM xp_events x JOIN weekly_goal_items g ON g.id = x.ref_id
+       WHERE x.type = 'weekly_goal' AND g.user_id = ? AND g.week_start = ?`
+    )
+      .bind(user.id, item.week_start)
+      .first<{ n: number }>()
+    if ((given?.n ?? 0) < XP_GOAL_WEEKLY_MAX) {
+      statements.push(grantXp(c.env.DB, user.id, 'weekly_goal', id, XP_GOAL_ITEM))
+      xpGranted = true
+    }
+  }
   if (!done && item.done) statements.push(revokeXp(c.env.DB, 'weekly_goal', id))
   await c.env.DB.batch(statements)
-  return c.json({ ok: true, ...(await xpSummary(c.env.DB, user.id)) })
+  return c.json({ ok: true, xpGranted, ...(await xpSummary(c.env.DB, user.id)) })
 })
 
 goals.delete('/:id', async (c) => {
