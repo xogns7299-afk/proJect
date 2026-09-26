@@ -9,7 +9,9 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:reset:local": "node -e \"require('fs').rmSync('.wrangler/state/v3/d1',{recursive:true,force:true})\" && npm run db:migrate:local",
     "typecheck": "tsc --noEmit",
-    "check:api": "node scripts/api-check.mjs"
+    "check:api": "node scripts/api-check.mjs",
+    "demo:sql": "node scripts/demo/make-seed.mjs",
+    "demo:reset:local": "wrangler d1 execute DB --local --file scripts/demo/seed.sql"
   },
   "dependencies": {
     "hono": "^4.13.8"
