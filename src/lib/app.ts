@@ -5,6 +5,7 @@ export type User = {
   login_id: string
   nickname: string
   character_id: string
+  display_stage: number | null
 }
 
 export type Env = {

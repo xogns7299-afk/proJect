@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { type Env, body, fail, text } from '../lib/app'
 import { endSession, hashPassword, requireAuth, startSession, verifyPassword } from '../lib/auth'
+import { STAGE_UNLOCK_LEVELS } from '../lib/rules'
 import { xpSummary } from '../lib/xp'
 
 const auth = new Hono<Env>()
@@ -57,6 +58,7 @@ auth.get('/me', requireAuth, async (c) => {
     loginId: user.login_id,
     nickname: user.nickname,
     characterId: user.character_id,
+    displayStage: user.display_stage, // null = 자동(열린 것 중 가장 최근 모습)
     ...(await xpSummary(c.env.DB, user.id)),
   })
 })
@@ -68,7 +70,19 @@ auth.patch('/me', requireAuth, async (c) => {
   const characterId = data.characterId === undefined ? user.character_id : text(data.characterId, 20)
   if (!nickname) return fail(c, 400, '닉네임을 입력해 주세요')
   if (!CHARACTER_ID.test(characterId)) return fail(c, 400, '캐릭터를 선택해 주세요')
-  await c.env.DB.prepare('UPDATE users SET nickname = ?, character_id = ? WHERE id = ?').bind(nickname, characterId, user.id).run()
+  // 표시 모습: 보내지 않으면 그대로, null·0이면 자동, 1~3이면 이미 열린 단계만
+  let displayStage = user.display_stage
+  if (data.displayStage !== undefined) {
+    displayStage = data.displayStage ? Number(data.displayStage) : null
+    if (displayStage !== null) {
+      if (![1, 2, 3].includes(displayStage)) return fail(c, 400, '표시 모습을 다시 골라 주세요')
+      const { level } = await xpSummary(c.env.DB, user.id)
+      if (level < STAGE_UNLOCK_LEVELS[displayStage - 1]) return fail(c, 400, '아직 열리지 않은 모습이에요')
+    }
+  }
+  await c.env.DB.prepare('UPDATE users SET nickname = ?, character_id = ?, display_stage = ? WHERE id = ?')
+    .bind(nickname, characterId, displayStage, user.id)
+    .run()
   return c.json({ ok: true })
 })
 

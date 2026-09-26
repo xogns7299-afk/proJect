@@ -8,6 +8,9 @@ export const MIN_SESSION_SEC = 60
 // 타이머를 켠 채 방치하는 것을 막기 위해 한 번의 기록은 8시간까지만 인정한다
 export const MAX_SESSION_SEC = 8 * 60 * 60
 
+// 캐릭터 성장 단계(1·2·3)가 열리는 레벨. 표시 모습은 열린 단계 안에서 고를 수 있다
+export const STAGE_UNLOCK_LEVELS = [1, 5, 10]
+
 // 레벨 N → N+1에 100×N XP
 export function levelOf(xp: number) {
   let level = 1

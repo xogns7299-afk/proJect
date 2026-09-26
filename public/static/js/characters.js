@@ -38,8 +38,12 @@ export function srcOf(characterId, slot) {
   return IMG + (slot ? `${c.id}_${slot}.webp` : `${c.id}.webp`)
 }
 
-// 레벨 구간별 전신 모습: Lv1~4 / Lv5~9 / Lv10+
-export const stageOf = (level) => (level >= 10 ? 'stage3' : level >= 5 ? 'stage2' : 'stage1')
+// 성장 단계(1 아기·2 성장·3 어른)가 열리는 레벨. 서버 src/lib/rules.ts 의 STAGE_UNLOCK_LEVELS 와 같다
+export const STAGE_UNLOCK = [1, 5, 10]
+export const STAGE_NAMES = ['아기', '성장', '어른']
+export const unlockedStage = (level) => STAGE_UNLOCK.filter((l) => level >= l).length
+// 화면에 보일 단계: 내 정보에서 고른 단계(없으면 자동 = 열린 것 중 가장 최근), 단 열린 단계를 넘지 않는다
+export const displayStageOf = (level, pref) => Math.min(pref || 3, unlockedStage(level))
 
 // 목록에 여러 개 나오는 작은 그림(아바타)만 늦게 불러온다. 화면 가운데 큰 그림은 바로 불러야 애니메이션이 끊기지 않는다.
 export const imgOf = (characterId, slot, cls = '', lazy = false) =>
@@ -47,7 +51,7 @@ export const imgOf = (characterId, slot, cls = '', lazy = false) =>
 
 // 원형 아바타에는 얼굴 그림을 쓴다 (전신 그림은 원 안에서 잘린다)
 export const avatarOf = (characterId) => imgOf(characterId, null, '', true)
-export const bodyOf = (characterId, level = 1, cls = '') => imgOf(characterId, stageOf(level), cls)
+export const bodyOf = (characterId, stage = 1, cls = '') => imgOf(characterId, `stage${stage}`, cls)
 
 // 애니메이션에 쓸 그림을 미리 받아 둔다 (프레임을 바꿀 때 깜빡이지 않게)
 export function preload(characterId, slots) {

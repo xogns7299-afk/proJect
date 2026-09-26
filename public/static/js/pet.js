@@ -1,4 +1,4 @@
-import { find, preload, srcOf, stageOf } from './characters.js'
+import { find, preload, srcOf } from './characters.js'
 
 // 캐릭터 애니메이션. 수치는 캐릭터 미리보기(Claude Design 제작)와 같다.
 // 기기에서 "동작 줄이기"를 켜 두면 움직이지 않고 정지 그림만 보여준다.
@@ -13,13 +13,13 @@ const REACT_MS = 800
 const TIMER_FRAME_MS = 350
 
 // 홈 캐릭터: 숨쉬기 → 가끔 칸 안을 오가며 걷기 → 누르면 반응 그림·점프·말풍선.
-// Lv5 이상은 성장한 모습이라, 아기 모습인 걷기·반응 그림 대신 성장 그림에 움직임만 준다.
-// wrap = .pet-wrap (안에 .pet-stage > img, .pet-bubble)
-export function mountPet(wrap, characterId, level) {
+// 걷기·반응 그림은 아기 모습이라, 성장·어른 모습을 보일 때는 그 그림에 움직임만 준다.
+// wrap = .pet-wrap (안에 .pet-stage > img, .pet-bubble), stage = 화면에 보일 단계(1~3)
+export function mountPet(wrap, characterId, stage) {
   const img = wrap.querySelector('img')
   const bubble = wrap.querySelector('.pet-bubble')
-  const base = srcOf(characterId, stageOf(level))
-  const baby = level < 5
+  const base = srcOf(characterId, `stage${stage}`)
+  const baby = stage === 1
   if (baby) preload(characterId, ['walk1', 'walk2', 'react'])
   img.classList.add('breathe')
 

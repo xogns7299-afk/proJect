@@ -53,6 +53,11 @@ check('틀린 비밀번호 → 401', (await client()('POST', '/auth/login', { lo
 const A2 = client()
 check('맞는 비밀번호로 로그인', (await A2('POST', '/auth/login', { loginId: `a_${run}`, password: 'test-password-1' })).status === 200)
 check('재로그인 후 내 정보 조회', (await A2('GET', '/auth/me')).body.nickname === 'a')
+check('표시 모습: 아직 열리지 않은 단계(Lv1에서 성장)는 고를 수 없음 → 400', (await A('PATCH', '/auth/me', { displayStage: 2 })).status === 400)
+await A('PATCH', '/auth/me', { displayStage: 1 })
+const pinned = (await A('GET', '/auth/me')).body.displayStage
+await A('PATCH', '/auth/me', { displayStage: null })
+check('표시 모습: 열린 단계는 저장되고, null이면 자동으로 돌아감', pinned === 1 && (await A('GET', '/auth/me')).body.displayStage === null)
 
 console.log('\n타이머')
 const subject = (await A('POST', '/subjects', { name: '수학' })).body

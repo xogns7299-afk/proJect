@@ -190,6 +190,17 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 }
 .char.on { border-color: var(--accent); background: var(--accent-soft); }
 .char .avatar { width: 56px; height: 56px; margin: 0 auto 6px; }
+.stage-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stage-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border: 2px solid var(--line);
+  border-radius: 14px; background: var(--card); color: var(--text); font: inherit; font-size: 13px; cursor: pointer;
+}
+.stage-opt.on { border-color: var(--accent); background: var(--accent-soft); }
+.stage-opt:disabled { cursor: default; opacity: 0.55; }
+.stage-img { width: 56px; height: 56px; display: grid; place-items: end center; }
+.stage-img img { width: 56px; height: 56px; object-fit: contain; }
+.stage-img .sil { filter: brightness(0); opacity: 0.35; }
+.stage-opt .hint { font-size: 11px; text-align: center; }
 
 /* ---------- 목록·행 ---------- */
 .list { list-style: none; margin: 0; padding: 0; }

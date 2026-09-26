@@ -62,7 +62,7 @@ export async function currentUser(c: Ctx) {
   const token = getCookie(c, COOKIE)
   if (!token) return null
   return c.env.DB.prepare(
-    `SELECT u.id, u.login_id, u.nickname, u.character_id
+    `SELECT u.id, u.login_id, u.nickname, u.character_id, u.display_stage
      FROM auth_sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ?`
   )

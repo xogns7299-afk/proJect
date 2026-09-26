@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { avatarOf, bodyOf } from '../characters.js'
+import { avatarOf, bodyOf, displayStageOf } from '../characters.js'
 import { $, $$, esc, fmtClock, fmtDuration } from '../dom.js'
 import { liveElapsed, setLive } from '../live.js'
 import { onSubmit, timeAgo, toast } from '../ui.js'
@@ -46,6 +46,7 @@ export async function renderHome(main, ctx, week = 0) {
 
   const timer = timerRes.timer
   setLive(timer)
+  const stage = displayStageOf(me.level, me.displayStage)
   const past = week < 0
   const openTodos = todos.filter((t) => !t.done)
 
@@ -54,7 +55,7 @@ export async function renderHome(main, ctx, week = 0) {
       <div class="col">
         <div class="card hero">
           <div class="pet-wrap">
-            <div class="pet-stage" data-pet role="button" tabindex="0" aria-label="${esc(me.nickname)}의 캐릭터 (누르면 반응해요)">${bodyOf(me.characterId, me.level)}</div>
+            <div class="pet-stage" data-pet role="button" tabindex="0" aria-label="${esc(me.nickname)}의 캐릭터 (누르면 반응해요)">${bodyOf(me.characterId, stage)}</div>
             <span class="pet-bubble" hidden></span>
           </div>
           <div class="me-info">
@@ -136,7 +137,7 @@ export async function renderHome(main, ctx, week = 0) {
       </div>
     </div>`
 
-  mountPet($('.pet-wrap', main), me.characterId, me.level)
+  mountPet($('.pet-wrap', main), me.characterId, stage)
   $('[data-timer]', main).onclick = () => openTimer(ctx, () => redraw())
   // 8시간을 넘겨 자동 종료된 기록이 있으면 바로 회고 화면을 띄운다
   if (timerRes.autoStopped) openTimer(ctx, () => redraw(), timerRes)

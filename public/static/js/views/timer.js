@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { bodyOf, has, imgOf } from '../characters.js'
+import { STAGE_NAMES, STAGE_UNLOCK, bodyOf, displayStageOf, has, imgOf, unlockedStage } from '../characters.js'
 import { bindPhotoRow, photoRowHtml } from '../photo.js'
 import { $, $$, esc, fmtClock, fmtDuration } from '../dom.js'
 import { setLive } from '../live.js'
@@ -76,7 +76,7 @@ export async function openTimer(ctx, onClose, initial) {
       1,
       `<div class="focus-body">
         <div class="col">
-          <div class="setup-pet">${bodyOf(ctx.me.characterId, ctx.me.level, 'breathe')}<div class="bubble" data-bubble>${bubbleText(selectedId)}</div></div>
+          <div class="setup-pet">${bodyOf(ctx.me.characterId, displayStageOf(ctx.me.level, ctx.me.displayStage), 'breathe')}<div class="bubble" data-bubble>${bubbleText(selectedId)}</div></div>
           <div class="notice"><b>한 번에 최대 ${MAX_HOURS}시간까지 기록돼요.</b> 더 공부할 때는 한 번 끊고 점검한 뒤 다시 타이머를 켜 주세요.
             쉴 때는 <b>일시정지</b>를 누르면 그 시간은 공부시간에서 빠집니다.</div>
         </div>
@@ -333,16 +333,20 @@ export async function openTimer(ctx, onClose, initial) {
   async function showDone(res, withReview) {
     const stats = await api.get('/records/stats').catch(() => null)
     if (closed) return
+    const stage = displayStageOf(res.level, ctx.me.displayStage)
+    // 이번 레벨업으로 새 성장 단계가 열렸는지 (Lv5·Lv10. 기록 1건 경험치 상한 때문에 두 단계를 한 번에 넘지는 않는다)
+    const newStage = res.leveledUp && STAGE_UNLOCK.includes(res.level) ? unlockedStage(res.level) : 0
     frame(
       0,
       `<div class="focus-body single"><div class="center-col">
         <div class="pet-stage xl">${
           res.leveledUp
             ? // 레벨업: 검은 실루엣 위로 1초 동안 색이 아래에서부터 채워진다
-              bodyOf(ctx.me.characterId, res.level, 'sil') + bodyOf(ctx.me.characterId, res.level, 'reveal')
-            : bodyOf(ctx.me.characterId, res.level, 'breathe')
+              bodyOf(ctx.me.characterId, stage, 'sil') + bodyOf(ctx.me.characterId, stage, 'reveal')
+            : bodyOf(ctx.me.characterId, stage, 'breathe')
         }</div>
         <h2>${res.leveledUp ? `레벨 업! Lv.${res.level}` : withReview ? '오늘도 수고했어요' : '기록만 저장했어요'}</h2>
+        ${newStage && stage < newStage ? `<p class="notice">새 모습(${STAGE_NAMES[newStage - 1]})이 열렸어요! 내 정보에서 표시 모습을 바꿀 수 있어요.</p>` : ''}
         <p class="sub">${withReview ? '공부 기록과 회고가 저장되었습니다.' : '회고는 기록 메뉴에서 언제든 이어서 쓸 수 있습니다.'}</p>
         <div class="stats">
           <div class="stat"><span class="sub">이번 기록</span><b>${fmtDuration(res.record.durationSec)}</b></div>

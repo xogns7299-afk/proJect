@@ -15,8 +15,8 @@
 | POST | `/signup` | `loginId`(영문 소문자·숫자·_ 4~20자), `password`(8자 이상), `nickname`(12자 이내), `characterId` | 가입 후 바로 로그인 상태가 된다 |
 | POST | `/login` | `loginId`, `password` | |
 | POST | `/logout` | | |
-| GET | `/me` | | `id, loginId, nickname, characterId, xp, level, current, needed` (current/needed = 현재 레벨에서 모은 XP / 다음 레벨까지 필요한 XP) |
-| PATCH | `/me` | `nickname?`, `characterId?` | |
+| GET | `/me` | | `id, loginId, nickname, characterId, displayStage, xp, level, current, needed` (current/needed = 현재 레벨에서 모은 XP / 다음 레벨까지 필요한 XP) |
+| PATCH | `/me` | `nickname?`, `characterId?`, `displayStage?` | `displayStage`: null = 자동, 1~3 = 그 단계. 아직 열리지 않은 단계(Lv5·Lv10 미만)는 400 |
 
 ## 과목 `/api/subjects`
 
