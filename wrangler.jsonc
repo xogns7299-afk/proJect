@@ -5,30 +5,22 @@
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  // Genspark 호스팅은 D1, R2 바인딩만 지원한다. kv_namespaces, triggers를 넣으면 배포가 실패한다.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "webapp-production",
+      // 로컬 개발에서는 쓰이지 않는다. 배포할 때 실제 D1 데이터베이스 id로 바꾼다.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // 오공시·오공완 사진. 배포 시 Genspark에서 실제 버킷을 연결한다.
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "webapp-photos"
+    }
   ]
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // }
 }

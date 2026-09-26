@@ -1,0 +1,78 @@
+import { createMiddleware } from 'hono/factory'
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
+import { type Ctx, type Env, type User, fail } from './app'
+
+const COOKIE = 'session'
+const SESSION_DAYS = 30
+// Cloudflare Workers의 PBKDF2 반복 횟수 상한이 100,000이다
+const PBKDF2_ITERATIONS = 100_000
+
+const toB64 = (buf: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(buf as ArrayBuffer)))
+const fromB64 = (s: string) => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0))
+
+async function pbkdf2(password: string, salt: Uint8Array, iterations: number) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
+  return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256)
+}
+
+export async function hashPassword(password: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const hash = await pbkdf2(password, salt, PBKDF2_ITERATIONS)
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${toB64(salt)}$${toB64(hash)}`
+}
+
+export async function verifyPassword(password: string, stored: string) {
+  const [scheme, iterations, salt, hash] = stored.split('$')
+  if (scheme !== 'pbkdf2') return false
+  const expected = fromB64(hash)
+  const actual = new Uint8Array(await pbkdf2(password, fromB64(salt), Number(iterations)))
+  if (actual.length !== expected.length) return false
+  let diff = 0
+  for (let i = 0; i < actual.length; i++) diff |= actual[i] ^ expected[i]
+  return diff === 0
+}
+
+async function sha256(value: string) {
+  return toB64(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))
+}
+
+// 세션 토큰은 쿠키에만 있고, DB에는 해시만 저장한다 (DB가 유출돼도 토큰을 쓸 수 없게)
+export async function startSession(c: Ctx, userId: number) {
+  const token = toB64(crypto.getRandomValues(new Uint8Array(32)))
+  const expiresAt = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000
+  await c.env.DB.prepare('INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
+    .bind(await sha256(token), userId, expiresAt)
+    .run()
+  setCookie(c, COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'Lax',
+    secure: new URL(c.req.url).protocol === 'https:',
+    path: '/',
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
+  })
+}
+
+export async function endSession(c: Ctx) {
+  const token = getCookie(c, COOKIE)
+  if (token) await c.env.DB.prepare('DELETE FROM auth_sessions WHERE token_hash = ?').bind(await sha256(token)).run()
+  deleteCookie(c, COOKIE, { path: '/' })
+}
+
+export async function currentUser(c: Ctx) {
+  const token = getCookie(c, COOKIE)
+  if (!token) return null
+  return c.env.DB.prepare(
+    `SELECT u.id, u.login_id, u.nickname, u.character_id
+     FROM auth_sessions s JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = ? AND s.expires_at > ?`
+  )
+    .bind(await sha256(token), Date.now())
+    .first<User>()
+}
+
+export const requireAuth = createMiddleware<Env>(async (c, next) => {
+  const user = await currentUser(c)
+  if (!user) return fail(c, 401, '로그인이 필요합니다')
+  c.set('user', user)
+  await next()
+})
