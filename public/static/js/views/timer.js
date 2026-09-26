@@ -3,6 +3,7 @@ import { bodyOf, has, imgOf } from '../characters.js'
 import { bindPhotoRow, photoRowHtml } from '../photo.js'
 import { $, $$, esc, fmtClock, fmtDuration } from '../dom.js'
 import { setLive } from '../live.js'
+import { animateTimer } from '../pet.js'
 import { closeLayer, onSubmit, openModal, pushLayer } from '../ui.js'
 
 const MAX_HOURS = 8
@@ -75,7 +76,7 @@ export async function openTimer(ctx, onClose, initial) {
       1,
       `<div class="focus-body">
         <div class="col">
-          <div class="setup-pet">${bodyOf(ctx.me.characterId, ctx.me.level)}<div class="bubble" data-bubble>${bubbleText(selectedId)}</div></div>
+          <div class="setup-pet">${bodyOf(ctx.me.characterId, ctx.me.level, 'breathe')}<div class="bubble" data-bubble>${bubbleText(selectedId)}</div></div>
           <div class="notice"><b>한 번에 최대 ${MAX_HOURS}시간까지 기록돼요.</b> 더 공부할 때는 한 번 끊고 점검한 뒤 다시 타이머를 켜 주세요.
             쉴 때는 <b>일시정지</b>를 누르면 그 시간은 공부시간에서 빠집니다.</div>
         </div>
@@ -156,15 +157,15 @@ export async function openTimer(ctx, onClose, initial) {
     running = { timer, at: performance.now() }
     setLive(timer)
     const paused = timer.status === 'paused'
-    // 일시정지 그림(rest)이 아직 없으면 타이머 그림을 흐리게 보여준다
+    // 일시정지 중에는 쉬는 그림 + Zzz (쉬는 그림이 없는 캐릭터는 타이머 그림을 흐리게)
     const pet = paused
-      ? imgOf(ctx.me.characterId, 'rest', `timer-pet${has(ctx.me.characterId, 'rest') ? '' : ' resting'}`)
+      ? imgOf(ctx.me.characterId, 'rest', `timer-pet${has(ctx.me.characterId, 'rest') ? '' : ' resting'}`) + '<span class="zzz" aria-hidden="true">Zzz</span>'
       : imgOf(ctx.me.characterId, 'timer1', 'timer-pet')
     frame(
       2,
       `<div class="focus-body">
         <div class="dial">
-          ${pet}
+          <div class="timer-pet-wrap">${pet}</div>
           <span class="status ${paused ? 'hold' : 'go'}"><i></i>${paused ? '쉬는 중' : '공부 중'}</span>
           <p class="bigtime" data-elapsed>0:00:00</p>
           <p class="sub">공부시간</p>
@@ -198,6 +199,7 @@ export async function openTimer(ctx, onClose, initial) {
         refresh()
       }
     }
+    if (!paused) animateTimer($('.timer-pet', screen), ctx.me.characterId)
     clearInterval(tick)
     tick = setInterval(paint, 500)
     paint()
@@ -334,7 +336,12 @@ export async function openTimer(ctx, onClose, initial) {
     frame(
       0,
       `<div class="focus-body single"><div class="center-col">
-        <div class="pet-stage xl ${res.leveledUp ? 'pop' : ''}">${bodyOf(ctx.me.characterId, res.level)}</div>
+        <div class="pet-stage xl">${
+          res.leveledUp
+            ? // 레벨업: 검은 실루엣 위로 1초 동안 색이 아래에서부터 채워진다
+              bodyOf(ctx.me.characterId, res.level, 'sil') + bodyOf(ctx.me.characterId, res.level, 'reveal')
+            : bodyOf(ctx.me.characterId, res.level, 'breathe')
+        }</div>
         <h2>${res.leveledUp ? `레벨 업! Lv.${res.level}` : withReview ? '오늘도 수고했어요' : '기록만 저장했어요'}</h2>
         <p class="sub">${withReview ? '공부 기록과 회고가 저장되었습니다.' : '회고는 기록 메뉴에서 언제든 이어서 쓸 수 있습니다.'}</p>
         <div class="stats">

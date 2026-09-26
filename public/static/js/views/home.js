@@ -3,6 +3,7 @@ import { avatarOf, bodyOf } from '../characters.js'
 import { $, $$, esc, fmtClock, fmtDuration } from '../dom.js'
 import { liveElapsed, setLive } from '../live.js'
 import { onSubmit, timeAgo, toast } from '../ui.js'
+import { mountPet } from '../pet.js'
 import { openTimer } from './timer.js'
 
 // 한국시간 날짜 계산 (기기 시간대와 상관없이)
@@ -52,7 +53,10 @@ export async function renderHome(main, ctx, week = 0) {
     <div class="cols home">
       <div class="col">
         <div class="card hero">
-          <div class="pet-stage" data-pet>${bodyOf(me.characterId, me.level)}</div>
+          <div class="pet-wrap">
+            <div class="pet-stage" data-pet role="button" tabindex="0" aria-label="${esc(me.nickname)}의 캐릭터 (누르면 반응해요)">${bodyOf(me.characterId, me.level)}</div>
+            <span class="pet-bubble" hidden></span>
+          </div>
           <div class="me-info">
             <div class="name"><b>${esc(me.nickname)}</b> <span class="lv">Lv.${me.level}</span></div>
             <div class="bar"><div class="bar-fill" style="width:${(me.current / me.needed) * 100}%"></div></div>
@@ -132,6 +136,7 @@ export async function renderHome(main, ctx, week = 0) {
       </div>
     </div>`
 
+  mountPet($('.pet-wrap', main), me.characterId, me.level)
   $('[data-timer]', main).onclick = () => openTimer(ctx, () => redraw())
   // 8시간을 넘겨 자동 종료된 기록이 있으면 바로 회고 화면을 띄운다
   if (timerRes.autoStopped) openTimer(ctx, () => redraw(), timerRes)
