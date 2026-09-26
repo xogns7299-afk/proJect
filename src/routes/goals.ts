@@ -8,6 +8,8 @@ const goals = new Hono<Env>()
 
 // week를 생략하면 이번 주. 어떤 날짜를 주든 그 주의 월요일로 맞춘다.
 const weekOf = (v: unknown) => weekStart(isDate(v) ? v : undefined)
+// 지난 주 목표는 보기만 한다. 체크를 바꾸면 이미 끝난 주의 경험치가 흔들리기 때문이다.
+const PAST_WEEK = '지난 주 목표는 바꿀 수 없습니다'
 
 goals.get('/', async (c) => {
   const week = weekOf(c.req.query('week'))
@@ -29,6 +31,7 @@ goals.post('/', async (c) => {
   const title = text(data.title, 100)
   if (!title) return fail(c, 400, '목표를 입력해 주세요')
   const week = weekOf(data.week)
+  if (week < weekStart()) return fail(c, 400, PAST_WEEK)
   const result = await c.env.DB.prepare('INSERT INTO weekly_goal_items (user_id, week_start, title) VALUES (?, ?, ?)')
     .bind(c.get('user').id, week, title)
     .run()
@@ -39,8 +42,11 @@ goals.patch('/:id', async (c) => {
   const user = c.get('user')
   const id = idParam(c)
   const data = await body(c)
-  const item = await c.env.DB.prepare('SELECT done FROM weekly_goal_items WHERE id = ? AND user_id = ?').bind(id, user.id).first<{ done: number }>()
+  const item = await c.env.DB.prepare('SELECT done, week_start FROM weekly_goal_items WHERE id = ? AND user_id = ?')
+    .bind(id, user.id)
+    .first<{ done: number; week_start: string }>()
   if (!item) return fail(c, 404, '목표를 찾을 수 없습니다')
+  if (item.week_start < weekStart()) return fail(c, 400, PAST_WEEK)
 
   const title = data.title === undefined ? null : text(data.title, 100)
   if (title === '') return fail(c, 400, '목표를 입력해 주세요')
@@ -63,8 +69,11 @@ goals.patch('/:id', async (c) => {
 
 goals.delete('/:id', async (c) => {
   const id = idParam(c)
-  const owned = await c.env.DB.prepare('SELECT 1 FROM weekly_goal_items WHERE id = ? AND user_id = ?').bind(id, c.get('user').id).first()
-  if (!owned) return fail(c, 404, '목표를 찾을 수 없습니다')
+  const item = await c.env.DB.prepare('SELECT week_start FROM weekly_goal_items WHERE id = ? AND user_id = ?')
+    .bind(id, c.get('user').id)
+    .first<{ week_start: string }>()
+  if (!item) return fail(c, 404, '목표를 찾을 수 없습니다')
+  if (item.week_start < weekStart()) return fail(c, 400, PAST_WEEK)
   await c.env.DB.batch([revokeXp(c.env.DB, 'weekly_goal', id), c.env.DB.prepare('DELETE FROM weekly_goal_items WHERE id = ?').bind(id)])
   return c.json({ ok: true })
 })

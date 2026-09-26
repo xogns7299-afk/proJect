@@ -1,4 +1,4 @@
-// 팀이 조정할 수 있는 수치를 한곳에 모은다. 현재 값은 docs/기능명세.md 7번의 [제안]이다.
+// 팀이 조정할 수 있는 수치를 한곳에 모은다. 현재 값은 docs/기능명세.md 7번의 [확정 9/26]이다.
 export const XP_PER_MINUTE = 1
 export const XP_SESSION_CAP = 240
 export const XP_GOAL_ITEM = 30

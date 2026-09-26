@@ -15,13 +15,13 @@ export async function renderTodo(main) {
   if (!main.isConnected) return
 
   main.innerHTML = `
-    <div class="card">
-      <form class="add" data-form><input name="title" maxlength="80" placeholder="할 일을 입력하세요" required><button class="btn primary">추가</button></form>
+    <div class="one"><div class="card">
+      <form class="add" data-form><input name="title" maxlength="80" placeholder="할 일을 입력하고 Enter" required><button class="btn primary">추가</button></form>
       <div class="error" role="alert"></div>
       <div class="chips small" data-filters></div>
       <ul class="checklist" data-list></ul>
       <button class="btn text" data-clear hidden>완료 항목 지우기</button>
-    </div>`
+    </div></div>`
 
   function draw() {
     $('[data-filters]', main).innerHTML = FILTERS.map(
@@ -35,7 +35,7 @@ export async function renderTodo(main) {
       ? shown
           .map(
             (t) => `<li><label class="check"><input type="checkbox" data-toggle="${t.id}" ${t.done ? 'checked' : ''}><span class="${t.done ? 'done' : ''}">${esc(t.title)}</span></label>
-              <button class="btn icon" data-del="${t.id}" aria-label="삭제">×</button></li>`
+              <button class="btn icon" data-del="${t.id}" aria-label="삭제" title="삭제">×</button></li>`
           )
           .join('')
       : `<li class="sub">${current.empty}</li>`

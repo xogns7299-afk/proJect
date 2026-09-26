@@ -32,15 +32,15 @@
 | 방식 | 주소 | 보내는 값 | 설명 |
 |---|---|---|---|
 | GET | `/` | | `{ timer, now }`. 진행 중인 타이머가 없으면 `timer: null` |
-| POST | `/start` | `subjectId` | 이미 진행 중이면 409 |
+| POST | `/start` | `subjectId`, `memo?`(1000자) | 이미 진행 중이면 409. `memo` = 준비 화면의 "오늘의 공부 내용" — 기록의 `memo`(회고 "오늘 공부한 내용")에 미리 저장된다 |
 | POST | `/pause` | | |
 | POST | `/resume` | | |
 | POST | `/stop` | | 공부시간 확정. `{ record, capped, xpGained, leveledUp, xp, level, current, needed }`. 1분 미만이면 저장하지 않고 `{ discarded: true, durationSec, minSec }` |
 
-- `timer` = `id, subjectId, subject, status(running/paused), startedAt, elapsedSec(공부시간), totalSec(총 경과), pausedSec(휴식), pauseCount, maxSec(상한 28800)`
+- `timer` = `id, subjectId, subject, status(running/paused), startedAt, elapsedSec(공부시간), totalSec(총 경과), pausedSec(휴식), pauseCount, startPhoto, memo, maxSec(상한 28800)`
 - 화면의 타이머 숫자는 받은 값에서 시작해 1초씩 올리면 된다(일시정지 중에는 공부시간 대신 휴식을 올린다). 새로고침하면 `GET /`으로 다시 받아 이어간다.
 - **8시간 상한:** 공부시간이 `maxSec`에 닿은 채 `GET /`을 부르면 서버가 그 자리에서 종료하고 `{ timer: null, autoStopped: {종료 응답과 같은 모양} }`을 **한 번만** 돌려준다. `POST /stop`도 8시간을 넘겼으면 8시간으로 잘라 기록하고 `capped: true`를 준다.
-- 종료 응답의 `record` = `id, subject, startedAt, endedAt, durationSec, totalSec, pausedSec, pauseCount`.
+- 종료 응답의 `record` = `id, subject, startedAt, endedAt, durationSec, totalSec, pausedSec, pauseCount, memo`.
 - 종료 후 회고는 `PATCH /api/records/:id`로 저장한다.
 - 사진: `POST /api/records/:id/photo` (multipart `kind`=start|end, `file` JPG/PNG/WEBP 3MB 이하, 내 기록만) → `{ key, url }`. `GET /api/photos/<key>`는 기록 주인과 같은 스터디 멤버만 볼 수 있다. 저장소는 R2 바인딩 `PHOTOS`. 브라우저는 `uploadPhoto()`(api.js)가 긴 변 1280px JPEG로 줄여 올린다.
 
@@ -68,7 +68,7 @@
 | 방식 | 주소 | 보내는 값 | 설명 |
 |---|---|---|---|
 | GET | `/` | 쿼리 `month=YYYY-MM` | 그 달의 내 일정 목록 `id, title, date, startTime, endTime, memo` |
-| POST | `/` | `title`, `date`, `startTime?`, `endTime?`, `memo?` | 개인 일정 |
+| POST | `/` | `title`, `date`, `startTime?`, `endTime?`, `memo?` | 개인 일정. 둘 다 있을 때 `endTime`이 `startTime`보다 빠르면 400 |
 | PUT | `/:id` | 위와 같음 | |
 | DELETE | `/:id` | | |
 
@@ -77,9 +77,9 @@
 | 방식 | 주소 | 보내는 값 | 설명 |
 |---|---|---|---|
 | GET | `/` | 쿼리 `week?`(그 주의 아무 날짜) | `{ weekStart, items[{id,title,done}], achievement(%) }`. 생략하면 이번 주 |
-| POST | `/` | `title`, `week?` | |
-| PATCH | `/:id` | `title?`, `done?` | 완료하면 +30 XP, 해제하면 회수. 바뀐 `xp, level…`을 함께 돌려준다 |
-| DELETE | `/:id` | | |
+| POST | `/` | `title`, `week?` | 지난 주에는 추가할 수 없다(400) |
+| PATCH | `/:id` | `title?`, `done?` | 완료하면 +30 XP, 해제하면 회수. 바뀐 `xp, level…`을 함께 돌려준다. 지난 주 목표는 400 |
+| DELETE | `/:id` | | 지난 주 목표는 400 |
 
 ## 스터디 `/api/studies`
 

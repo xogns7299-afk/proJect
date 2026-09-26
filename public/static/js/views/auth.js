@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { CHARACTERS, profileImageOf } from '../characters.js'
+import { CHARACTERS, avatarOf } from '../characters.js'
 import { $, $$, esc } from '../dom.js'
 
 // 로그인·가입 화면. 성공하면 onDone()을 부른다.
@@ -22,7 +22,7 @@ export function renderAuth(root, onDone) {
                  <div class="sub">캐릭터</div>
                  <div class="char-grid">${CHARACTERS.map(
                    (ch) => `<button type="button" class="char ${ch.id === characterId ? 'on' : ''}" data-id="${esc(ch.id)}">
-                     <span class="avatar">${profileImageOf(ch.id)}</span>${esc(ch.name)}</button>`
+                     <span class="avatar">${avatarOf(ch.id)}</span>${esc(ch.name)}</button>`
                  ).join('')}</div>`
               : ''
           }

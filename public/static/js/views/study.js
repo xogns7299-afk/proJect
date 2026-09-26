@@ -1,7 +1,7 @@
 import { api } from '../api.js'
 import { avatarOf } from '../characters.js'
 import { $, $$, esc, fmtDuration } from '../dom.js'
-import { onSubmit, openSheet, timeAgo } from '../ui.js'
+import { onSubmit, openModal, timeAgo } from '../ui.js'
 
 const LAST_STUDY = 'lastStudyId'
 const remember = (id) => {
@@ -31,19 +31,19 @@ export async function renderStudy(main) {
   async function draw() {
     if (!studies.length) {
       main.innerHTML = `
-        <div class="card center empty">
+        <div class="one"><div class="card center empty">
           <div class="empty-icon">👥</div>
           <h2>아직 가입한 스터디가 없어요</h2>
           <p class="sub">스터디에 들어가면 서로의 공부 기록과 목표 달성 현황을 볼 수 있어요.<br>내 기록은 따로 올리지 않아도 자동으로 공유됩니다.</p>
           <button class="btn primary big" data-join>초대 코드로 가입</button>
           <button class="btn big" data-create>새 스터디 만들기</button>
-        </div>`
+        </div></div>`
       bindJoinCreate()
       return
     }
 
     main.innerHTML = `
-      <div class="chips">
+      <div class="chips" style="margin-bottom:16px">
         ${studies.map((s) => `<button class="chip ${s.id === currentId ? 'on' : ''}" data-study="${s.id}">${esc(s.name)}</button>`).join('')}
         <button class="chip" data-join>+ 가입</button>
         <button class="chip" data-create>+ 만들기</button>
@@ -60,6 +60,8 @@ export async function renderStudy(main) {
     const body = $('[data-body]', main)
     const studyingCount = study.members.filter((m) => m.studying).length
     body.innerHTML = `
+      <div class="cols narrow-left">
+      <div class="col">
       <div class="card">
         <div class="card-head">
           <h2>멤버 · 이번 주</h2>
@@ -71,7 +73,7 @@ export async function renderStudy(main) {
               (m, i) => `<li>
                 <button class="row-btn" data-member="${m.id}" aria-expanded="false">
                   <span class="rank">${i + 1}</span>
-                  <span class="avatar sm">${avatarOf(m.characterId, m.level)}</span>
+                  <span class="avatar sm">${avatarOf(m.characterId)}</span>
                   <span class="grow">
                     <b>${esc(m.nickname)}</b>${m.id === study.myId ? ' <span class="sub">(나)</span>' : ''} <span class="lv">Lv.${m.level}</span>
                     ${m.studying ? `<span class="tag live">${esc(m.studyingSubject)} 공부 중</span>` : ''}
@@ -90,13 +92,6 @@ export async function renderStudy(main) {
       </div>
 
       <div class="card">
-        <div class="card-head"><h2>공부 기록</h2><span class="sub">최근 50건</span></div>
-        <ul class="list" data-feed>
-          ${feed.length ? feed.map((r) => feedItem(r, study.myId)).join('') : '<li class="sub">아직 공부 기록이 없습니다. 첫 기록의 주인공이 되어 보세요!</li>'}
-        </ul>
-      </div>
-
-      <div class="card">
         <div class="card-head"><h2>${esc(study.name)}</h2><span class="sub">${study.role === 'owner' ? '스터디장' : '멤버'}</span></div>
         ${study.description ? `<p class="sub">${esc(study.description)}</p>` : ''}
         <div class="invite">
@@ -104,6 +99,15 @@ export async function renderStudy(main) {
           <button class="btn" data-copy>복사</button>
         </div>
         <button class="btn text danger-text" data-exit>${study.role === 'owner' ? '스터디 삭제' : '스터디 나가기'}</button>
+      </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>공부 기록</h2><span class="sub">최근 50건</span></div>
+        <ul class="list" data-feed>
+          ${feed.length ? feed.map((r) => feedItem(r, study.myId)).join('') : '<li class="sub">아직 공부 기록이 없습니다. 첫 기록의 주인공이 되어 보세요!</li>'}
+        </ul>
+      </div>
       </div>`
 
     $$('[data-member]', body).forEach((btn) => (btn.onclick = () => toggleGoals(btn)))
@@ -134,7 +138,7 @@ export async function renderStudy(main) {
   const feedItem = (r, myId) => `
     <li class="feed-item">
       <div class="feed-top">
-        <span class="avatar sm">${avatarOf(r.characterId, r.level)}</span>
+        <span class="avatar sm">${avatarOf(r.characterId)}</span>
         <span class="grow">
           <b>${esc(r.nickname)}</b> <span class="lv">Lv.${r.level}</span>
           <span class="sub block">${timeAgo(r.startedAt)} · <span class="tag">${esc(r.subject)}</span></span>
@@ -188,9 +192,9 @@ export async function renderStudy(main) {
         <ul>${comments
           .map(
             (cm) => `<li>
-              <span class="avatar xs">${avatarOf(cm.characterId, 1)}</span>
+              <span class="avatar xs">${avatarOf(cm.characterId)}</span>
               <span class="grow"><b>${esc(cm.nickname)}</b> <span class="sub">${timeAgo(cm.createdAt)}</span><span class="block">${esc(cm.body)}</span></span>
-              ${cm.userId === myId ? `<button class="btn icon" data-del="${cm.id}" aria-label="댓글 삭제">×</button>` : ''}
+              ${cm.userId === myId ? `<button class="btn icon" data-del="${cm.id}" aria-label="댓글 삭제" title="삭제">×</button>` : ''}
             </li>`
           )
           .join('')}</ul>
@@ -212,12 +216,12 @@ export async function renderStudy(main) {
 
   function bindJoinCreate() {
     $('[data-join]', main).onclick = () => {
-      const sheet = openSheet(`
+      const sheet = openModal(`
         <form class="form">
           <h2>초대 코드로 가입</h2>
           <label>초대 코드<input name="inviteCode" maxlength="8" autocapitalize="characters" placeholder="예: AB12CD34" required></label>
           <div class="error" role="alert"></div>
-          <button class="btn primary big">가입하기</button>
+          <div class="modal-foot"><button class="btn primary">가입하기</button></div>
         </form>`)
       onSubmit($('form', sheet.el), async (form) => {
         const study = await api.post('/studies/join', { inviteCode: form.get('inviteCode') })
@@ -226,14 +230,14 @@ export async function renderStudy(main) {
       })
     }
     $('[data-create]', main).onclick = () => {
-      const sheet = openSheet(`
+      const sheet = openModal(`
         <form class="form">
           <h2>새 스터디 만들기</h2>
           <label>스터디 이름<input name="name" maxlength="30" required></label>
           <label>소개 (선택)<input name="description" maxlength="200"></label>
           <div class="error" role="alert"></div>
-          <button class="btn primary big">만들기</button>
-          <p class="sub center">만든 뒤 초대 코드를 멤버에게 알려주세요</p>
+          <p class="hint">만든 뒤 초대 코드를 멤버에게 알려주세요</p>
+          <div class="modal-foot"><button class="btn primary">만들기</button></div>
         </form>`)
       onSubmit($('form', sheet.el), async (form) => {
         const study = await api.post('/studies', Object.fromEntries(form))

@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { type Env, body, fail } from '../lib/app'
+import { type Env, body, fail, text } from '../lib/app'
 import { MAX_SESSION_SEC, MIN_SESSION_SEC, XP_PER_MINUTE, XP_SESSION_CAP } from '../lib/rules'
 import { kstDate } from '../lib/time'
 import { grantXp, xpSummary } from '../lib/xp'
@@ -16,12 +16,13 @@ type Active = {
   paused_total_sec: number
   pause_count: number
   start_photo: string | null
+  memo: string
 }
 
 function findActive(db: D1Database, userId: number) {
   return db
     .prepare(
-      `SELECT s.id, s.subject_id, sub.name AS subject, s.status, s.started_at, s.paused_at, s.paused_total_sec, s.pause_count, s.start_photo
+      `SELECT s.id, s.subject_id, sub.name AS subject, s.status, s.started_at, s.paused_at, s.paused_total_sec, s.pause_count, s.start_photo, s.memo
        FROM study_sessions s JOIN subjects sub ON sub.id = s.subject_id
        WHERE s.user_id = ? AND s.status <> 'done'`
     )
@@ -47,6 +48,7 @@ const view = (s: Active, now: number) => ({
   startedAt: s.started_at,
   pauseCount: s.pause_count,
   startPhoto: s.start_photo,
+  memo: s.memo,
   maxSec: MAX_SESSION_SEC,
   ...times(s, now),
 })
@@ -90,6 +92,7 @@ async function finalize(db: D1Database, userId: number, s: Active, now: number) 
       totalSec: Math.floor((endedAt - s.started_at) / 1000),
       pausedSec,
       pauseCount: s.pause_count,
+      memo: s.memo,
     },
     capped,
     maxSec: MAX_SESSION_SEC,
@@ -117,14 +120,16 @@ timer.post('/start', async (c) => {
     .bind(Number(data.subjectId) || 0, user.id)
     .first()
   if (!subject) return fail(c, 400, '과목을 선택해 주세요')
+  // 준비 화면의 "오늘의 공부 내용". 회고의 "공부한 내용"과 같은 칸에 미리 넣어 둔다
+  const memo = text(data.memo, 1000)
   if (await findActive(c.env.DB, user.id)) return fail(c, 409, '이미 진행 중인 타이머가 있습니다')
 
   const now = Date.now()
   try {
     await c.env.DB.prepare(
-      `INSERT INTO study_sessions (user_id, subject_id, status, started_at, start_date) VALUES (?, ?, 'running', ?, ?)`
+      `INSERT INTO study_sessions (user_id, subject_id, status, started_at, start_date, memo) VALUES (?, ?, 'running', ?, ?, ?)`
     )
-      .bind(user.id, subject.id, now, kstDate(now))
+      .bind(user.id, subject.id, now, kstDate(now), memo)
       .run()
   } catch {
     // 동시에 두 번 눌린 경우: 부분 UNIQUE 인덱스가 두 번째 시작을 막는다

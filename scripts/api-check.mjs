@@ -57,7 +57,8 @@ check('재로그인 후 내 정보 조회', (await A2('GET', '/auth/me')).body.n
 console.log('\n타이머')
 const subject = (await A('POST', '/subjects', { name: '수학' })).body
 const t0 = Date.now()
-const started = (await A('POST', '/timer/start', { subjectId: subject.id })).body.timer
+const started = (await A('POST', '/timer/start', { subjectId: subject.id, memo: 'MEMO-1' })).body.timer
+check('준비 화면의 오늘의 공부 내용이 기록에 미리 저장됨', started?.memo === 'MEMO-1')
 check('타이머 시작', started?.status === 'running')
 check('타이머 동시에 두 개 → 409', (await A('POST', '/timer/start', { subjectId: subject.id })).status === 409)
 check('다른 사람의 과목으로 시작 → 400', (await B('POST', '/timer/start', { subjectId: subject.id })).status === 400)
@@ -115,6 +116,9 @@ check('달성률 50%', (await A('GET', '/goals')).body.achievement === 50)
 await A('PATCH', `/goals/${goal.id}`, { done: false })
 check('체크 해제 시 경험치 회수', (await A('GET', '/auth/me')).body.xp === xpBefore)
 await A('PATCH', `/goals/${goal.id}`, { done: true })
+const lastWeek = new Date(Date.now() + 9 * 3600e3 - 7 * 86400e3).toISOString().slice(0, 10)
+check('지난 주 목표 조회 가능', (await A('GET', `/goals?week=${lastWeek}`)).status === 200)
+check('지난 주에 목표 추가 → 400', (await A('POST', '/goals', { title: 'x', week: lastWeek })).status === 400)
 
 console.log('\n할 일 · 개인 일정 (본인만)')
 const todo = (await A('POST', '/todos', { title: '도서관 책 반납' })).body
@@ -128,6 +132,7 @@ const month = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 7)
 const ev = (await A('POST', '/events', { title: '전공 퀴즈', date: `${month}-15`, startTime: '10:00' })).body
 check('B는 A의 일정을 삭제할 수 없음', (await B('DELETE', `/events/${ev.id}`)).status === 404)
 check('캘린더: A에게만 보임', (await A('GET', `/events?month=${month}`)).body.length === 1 && (await B('GET', `/events?month=${month}`)).body.length === 0)
+check('종료 시각이 시작보다 빠른 일정 → 400', (await A('POST', '/events', { title: 'x', date: `${month}-15`, startTime: '10:00', endTime: '09:00' })).status === 400)
 await A('PUT', `/events/${ev.id}`, { title: '전공 퀴즈(변경)', date: `${month}-16` })
 check('일정 수정 반영', (await A('GET', `/events?month=${month}`)).body[0].date === `${month}-16`)
 

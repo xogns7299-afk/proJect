@@ -1,17 +1,52 @@
 import { $ } from './dom.js'
 
-// 화면 아래에서 올라오는 입력 창. html을 넣어 열고, 돌려받은 close()로 닫는다.
-// 바깥 어두운 부분이나 × 버튼을 눌러도 닫힌다.
-export function openSheet(html) {
-  const overlay = document.createElement('div')
-  overlay.className = 'overlay'
-  overlay.innerHTML = `<div class="sheet"><button class="sheet-close" aria-label="닫기">×</button>${html}</div>`
-  const close = () => overlay.remove()
-  overlay.onclick = (e) => e.target === overlay && close()
-  $('.sheet-close', overlay).onclick = close
-  document.body.append(overlay)
-  $('input, textarea', overlay)?.focus()
-  return { el: overlay, close }
+// 화면 위에 겹쳐 뜨는 것(대화상자, 타이머 집중 모드)을 쌓아 관리한다.
+// 하나 열 때마다 브라우저 기록에 한 칸을 쌓아서, 브라우저 뒤로가기로 맨 위의 것이 닫히게 한다.
+// Esc는 맨 위의 것을 닫는다.
+const layers = [] // { el, onClose }
+let skipPop = 0
+
+export function pushLayer(el, onClose) {
+  document.body.append(el)
+  layers.push({ el, onClose })
+  history.pushState({ layer: layers.length }, '')
+}
+
+export function closeLayer(el) {
+  const i = layers.findIndex((l) => l.el === el)
+  if (i < 0) return
+  const [layer] = layers.splice(i, 1)
+  layer.el.remove()
+  layer.onClose?.()
+  // 쌓아 둔 기록 한 칸을 되돌린다. 이때 생기는 popstate는 무시한다
+  skipPop++
+  history.back()
+}
+
+window.addEventListener('popstate', () => {
+  if (skipPop) return skipPop--
+  const layer = layers.pop()
+  if (!layer) return
+  layer.el.remove()
+  layer.onClose?.()
+})
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && layers.length) closeLayer(layers[layers.length - 1].el)
+})
+
+// 화면 가운데 대화상자. html을 넣어 열고, 돌려받은 close()로 닫는다.
+// 바깥 어두운 부분·× 버튼·Esc·브라우저 뒤로가기로도 닫힌다.
+export function openModal(html, onClose) {
+  const bg = document.createElement('div')
+  bg.className = 'modal-bg'
+  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><button type="button" class="modal-close" aria-label="닫기">×</button>${html}</div>`
+  const close = () => closeLayer(bg)
+  bg.onclick = (e) => e.target === bg && close()
+  $('.modal-close', bg).onclick = close
+  pushLayer(bg, onClose)
+  $('input:not([type=checkbox]):not([type=file]), textarea', bg)?.focus()
+  return { el: bg, close }
 }
 
 // 폼 제출 공통 처리: 중복 제출을 막고, 실패하면 폼 안의 .error에 서버 메시지를 보여준다
@@ -30,6 +65,17 @@ export function onSubmit(form, handler) {
       if (button) button.disabled = false
     }
   }
+}
+
+// 잠깐 떴다 사라지는 알림
+export function toast(html, ms = 2200) {
+  document.querySelector('.toast')?.remove()
+  const el = document.createElement('div')
+  el.className = 'toast'
+  el.setAttribute('role', 'status')
+  el.innerHTML = html
+  document.body.append(el)
+  setTimeout(() => el.remove(), ms)
 }
 
 export function timeAgo(ms) {

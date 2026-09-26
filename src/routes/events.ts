@@ -9,13 +9,10 @@ async function readEvent(c: Ctx) {
   const title = text(data.title, 100)
   if (!title) return '일정 제목을 입력해 주세요'
   if (!isDate(data.date)) return '날짜를 선택해 주세요'
-  return {
-    title,
-    date: data.date,
-    startTime: isTime(data.startTime) ? data.startTime : null,
-    endTime: isTime(data.endTime) ? data.endTime : null,
-    memo: text(data.memo, 500),
-  }
+  const startTime = isTime(data.startTime) ? data.startTime : null
+  const endTime = isTime(data.endTime) ? data.endTime : null
+  if (startTime && endTime && endTime < startTime) return '종료 시각이 시작 시각보다 빨라요'
+  return { title, date: data.date, startTime, endTime, memo: text(data.memo, 500) }
 }
 
 // 캘린더 한 달치. 개인 일정은 본인만 본다.
