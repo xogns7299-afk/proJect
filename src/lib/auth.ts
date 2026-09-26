@@ -32,6 +32,23 @@ export async function verifyPassword(password: string, stored: string) {
   return diff === 0
 }
 
+// 비밀번호 규칙: 8~72자, 한글 없이 (한/영 전환을 잊고 한글로 저장돼 로그인을 못 하는 일을 막는다)
+export function passwordProblem(password: string) {
+  if (password.length < 8 || password.length > 72) return '비밀번호는 8자 이상이어야 합니다'
+  if (/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(password)) return '비밀번호에 한글이 들어갔어요. 한/영 전환을 확인해 주세요'
+  return ''
+}
+
+// 복구 코드: 헷갈리는 글자(0·O·1·I·L)를 뺀 32글자 중 8자리 (XXXX-XXXX). 비밀번호처럼 해시로만 저장한다.
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+export function newRecoveryCode() {
+  const bytes = crypto.getRandomValues(new Uint8Array(8))
+  const code = [...bytes].map((b) => CODE_CHARS[b % CODE_CHARS.length]).join('')
+  return `${code.slice(0, 4)}-${code.slice(4)}`
+}
+// 입력한 코드는 대소문자·하이픈·공백을 무시하고 비교한다
+export const normalizeCode = (code: unknown) => (typeof code === 'string' ? code.toUpperCase().replace(/[^A-Z0-9]/g, '') : '')
+
 async function sha256(value: string) {
   return toB64(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))
 }

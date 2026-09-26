@@ -183,6 +183,10 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 /* ---------- 로그인·가입 ---------- */
 .auth { max-width: 380px; margin: 0 auto; padding: 48px 16px; display: flex; flex-direction: column; gap: 14px; }
 .auth form { display: flex; flex-direction: column; gap: 12px; }
+.auth-links { display: flex; flex-direction: column; align-items: center; gap: 0; }
+/* 복구 코드: 한 번만 보여 주므로 크게, 복사하기 쉽게 */
+.code-block { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px dashed var(--accent); border-radius: 12px; background: var(--accent-soft); }
+.code-block code { font-size: 22px; font-weight: 700; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
 .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .char {
   border: 2px solid var(--line); background: var(--card); color: var(--text);

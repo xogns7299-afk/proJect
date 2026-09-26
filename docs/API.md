@@ -2,7 +2,7 @@
 
 - 최종 수정: 2026-09-21
 - 모든 주소는 `/api`로 시작한다. 요청·응답은 JSON.
-- `/api/auth/signup`, `/login`, `/logout`, `/api/health`를 뺀 모든 API는 로그인이 필요하다 (없으면 401).
+- `/api/auth/signup`, `/login`, `/logout`, `/reset-password`, `/api/health`를 뺀 모든 API는 로그인이 필요하다 (없으면 401).
 - 실패하면 `{ "error": "한국어 메시지" }`를 돌려준다. 화면은 이 메시지를 그대로 보여주면 된다.
 - 시각은 UTC 밀리초 숫자, 날짜는 한국시간 `YYYY-MM-DD`, 시간은 `HH:MM`.
 - 다른 사람의 자료를 요청하면 "없음(404)"으로 응답한다. 권한은 전부 서버에서 검사한다.
@@ -12,9 +12,12 @@
 
 | 방식 | 주소 | 보내는 값 | 설명 |
 |---|---|---|---|
-| POST | `/signup` | `loginId`(영문 소문자·숫자·_ 4~20자), `password`(8자 이상), `nickname`(12자 이내), `characterId` | 가입 후 바로 로그인 상태가 된다 |
+| POST | `/signup` | `loginId`(영문 소문자·숫자·_ 4~20자), `password`(8~72자, 한글 불가), `nickname`(12자 이내), `characterId` | 가입 후 바로 로그인 상태가 된다. `{ ok, recoveryCode }` — 복구 코드(XXXX-XXXX)는 이 응답에서만 준다 |
 | POST | `/login` | `loginId`, `password` | |
 | POST | `/logout` | | |
+| POST | `/reset-password` | `loginId`, `recoveryCode`(대소문자·하이픈 무시), `newPassword` | 비밀번호 찾기. 틀리면 401(아이디·코드 중 무엇이 틀렸는지 알려주지 않음), 5번 틀리면 15분 잠김(429). 성공하면 다른 로그인은 모두 풀리고 이 기기에 로그인, 쓴 코드는 버리고 새 `recoveryCode`를 준다 |
+| POST | `/password` | `currentPassword`, `newPassword` | 비밀번호 변경(로그인 필요). 현재 비밀번호가 틀리면 400. 다른 기기 로그인은 풀리고 이 기기는 유지 |
+| POST | `/recovery-code` | `currentPassword` | 복구 코드 새로 받기(로그인 필요). 예전 코드는 쓸 수 없게 된다 |
 | GET | `/me` | | `id, loginId, nickname, characterId, displayStage, xp, level, current, needed` (current/needed = 현재 레벨에서 모은 XP / 다음 레벨까지 필요한 XP) |
 | PATCH | `/me` | `nickname?`, `characterId?`, `displayStage?` | `displayStage`: null = 자동, 1~3 = 그 단계. 아직 열리지 않은 단계(Lv5·Lv10 미만)는 400 |
 

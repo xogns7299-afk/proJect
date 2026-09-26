@@ -15,7 +15,7 @@ export type Env = {
 
 export type Ctx = Context<Env>
 
-export const fail = (c: Ctx, status: 400 | 401 | 403 | 404 | 409, message: string) =>
+export const fail = (c: Ctx, status: 400 | 401 | 403 | 404 | 409 | 429, message: string) =>
   c.json({ error: message }, status)
 
 // JSON 본문이 없거나 깨져 있어도 빈 객체로 받는다

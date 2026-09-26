@@ -59,6 +59,25 @@ const pinned = (await A('GET', '/auth/me')).body.displayStage
 await A('PATCH', '/auth/me', { displayStage: null })
 check('표시 모습: 열린 단계는 저장되고, null이면 자동으로 돌아감', pinned === 1 && (await A('GET', '/auth/me')).body.displayStage === null)
 
+console.log('\n비밀번호 찾기 · 변경')
+const E = client()
+const eId = `e_${run}`
+const eSignup = await E('POST', '/auth/signup', { loginId: eId, password: 'test-password-1', nickname: 'e', characterId: 'calico' })
+check('가입하면 복구 코드(XXXX-XXXX)를 한 번 준다', /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(eSignup.body.recoveryCode ?? ''))
+check('한글이 섞인 비밀번호로 가입 → 400', (await client()('POST', '/auth/signup', { loginId: `k_${run}`, password: '뮻ㅇ12345678', nickname: 'k', characterId: 'calico' })).status === 400)
+check('틀린 복구 코드 → 401', (await client()('POST', '/auth/reset-password', { loginId: eId, recoveryCode: 'AAAA-AAAA', newPassword: 'new-password-2' })).status === 401)
+const E2 = client()
+const reset = await E2('POST', '/auth/reset-password', { loginId: eId, recoveryCode: eSignup.body.recoveryCode.toLowerCase(), newPassword: 'new-password-2' })
+check('복구 코드로 새 비밀번호 설정(대소문자 무관), 새 복구 코드 발급', reset.status === 200 && reset.body.recoveryCode && reset.body.recoveryCode !== eSignup.body.recoveryCode)
+check('비밀번호 찾기 후 예전 로그인은 풀림', (await E('GET', '/auth/me')).status === 401)
+check('쓴 복구 코드는 다시 못 씀', (await client()('POST', '/auth/reset-password', { loginId: eId, recoveryCode: eSignup.body.recoveryCode, newPassword: 'new-password-3' })).status === 401)
+check('새 비밀번호로 로그인, 예전 비밀번호는 거부', (await client()('POST', '/auth/login', { loginId: eId, password: 'new-password-2' })).status === 200 && (await client()('POST', '/auth/login', { loginId: eId, password: 'test-password-1' })).status === 401)
+check('비밀번호 변경: 현재 비밀번호가 틀리면 400', (await E2('POST', '/auth/password', { currentPassword: 'wrong-password', newPassword: 'new-password-4' })).status === 400)
+check('비밀번호 변경 성공, 지금 기기는 로그인 유지', (await E2('POST', '/auth/password', { currentPassword: 'new-password-2', newPassword: 'new-password-4' })).status === 200 && (await E2('GET', '/auth/me')).status === 200)
+check('복구 코드 새로 받기 (현재 비밀번호 확인)', (await E2('POST', '/auth/recovery-code', { currentPassword: 'wrong' })).status === 400 && /-/.test((await E2('POST', '/auth/recovery-code', { currentPassword: 'new-password-4' })).body.recoveryCode ?? ''))
+for (let i = 0; i < 5; i++) await client()('POST', '/auth/reset-password', { loginId: eId, recoveryCode: 'BBBB-BBBB', newPassword: 'new-password-5' })
+check('복구 코드를 5번 틀리면 잠김 → 429', (await client()('POST', '/auth/reset-password', { loginId: eId, recoveryCode: 'CCCC-CCCC', newPassword: 'new-password-5' })).status === 429)
+
 console.log('\n타이머')
 const subject = (await A('POST', '/subjects', { name: '수학' })).body
 const t0 = Date.now()
