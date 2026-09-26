@@ -18,8 +18,8 @@ function client() {
   return async (method, path, data) => {
     const res = await fetch(BASE + '/api' + path, {
       method,
-      headers: { ...(cookie && { cookie }), ...(data && { 'content-type': 'application/json' }) },
-      body: data && JSON.stringify(data),
+      headers: { ...(cookie && { cookie }), ...(data && !(data instanceof FormData) && { 'content-type': 'application/json' }) },
+      body: data instanceof FormData ? data : data && JSON.stringify(data),
     })
     const set = res.headers.get('set-cookie')
     if (set) cookie = set.split(';')[0]
@@ -176,6 +176,24 @@ check('남의 댓글은 지울 수 없음 → 404', (await A('DELETE', `/studies
 check('피드의 댓글 수 1', (await A('GET', `/studies/${study1.id}/feed`)).body[0].commentCount === 1)
 check('쓴 사람은 지울 수 있음', (await B('DELETE', `/studies/${study1.id}/comments/${comment.id}`)).status === 200)
 await B('POST', `/studies/${study1.id}/feed/${rec}/comments`, { body: '삭제될 기록의 댓글' })
+
+console.log('\n사진 (R2)')
+// 1×1 PNG
+const PNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='), (ch) => ch.charCodeAt(0))
+const photoForm = (type = 'image/png') => {
+  const f = new FormData()
+  f.append('kind', 'start')
+  f.append('file', new Blob([PNG], { type }), 'p.png')
+  return f
+}
+const D = await signup('d')
+const up = await A('POST', `/records/${rec}/photo`, photoForm())
+check('내 기록에 사진 올리기', up.status === 201 && up.body.url?.startsWith('/api/photos/'))
+check('주인은 사진을 볼 수 있음', (await A('GET', up.body.url.slice(4))).status === 200)
+check('같은 스터디 B는 사진을 볼 수 있음', (await B('GET', up.body.url.slice(4))).status === 200)
+check('스터디를 같이 하지 않는 D는 볼 수 없음 → 404', (await D('GET', up.body.url.slice(4))).status === 404)
+check('남의 기록에 사진 올리기 → 404', (await B('POST', `/records/${rec}/photo`, photoForm())).status === 404)
+check('사진이 아닌 파일 → 400', (await A('POST', `/records/${rec}/photo`, photoForm('text/plain'))).status === 400)
 
 await B('POST', `/studies/${study1.id}/leave`)
 check('탈퇴 후에는 스터디 접근 불가', (await B('GET', `/studies/${study1.id}`)).status === 404)

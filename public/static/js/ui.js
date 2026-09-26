@@ -42,7 +42,10 @@ export function openModal(html, onClose) {
   bg.className = 'modal-bg'
   bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><button type="button" class="modal-close" aria-label="닫기">×</button>${html}</div>`
   const close = () => closeLayer(bg)
-  bg.onclick = (e) => e.target === bg && close()
+  // 값을 반환하지 않는다: onclick이 false를 반환하면 브라우저가 기본 동작(폼 제출)을 취소한다
+  bg.onclick = (e) => {
+    if (e.target === bg) close()
+  }
   $('.modal-close', bg).onclick = close
   pushLayer(bg, onClose)
   $('input:not([type=checkbox]):not([type=file]), textarea', bg)?.focus()
