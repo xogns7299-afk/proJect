@@ -60,7 +60,7 @@ export async function renderStudy(main) {
     const body = $('[data-body]', main)
     const studyingCount = study.members.filter((m) => m.studying).length
     body.innerHTML = `
-      <div class="cols narrow-left">
+      <div class="cols narrow-left study">
       <div class="col">
       <div class="card">
         <div class="card-head">
@@ -91,7 +91,7 @@ export async function renderStudy(main) {
         </ul>
       </div>
 
-      <div class="card">
+      <div class="card late">
         <div class="card-head"><h2>${esc(study.name)}</h2><span class="sub">${study.role === 'owner' ? '스터디장' : '멤버'}</span></div>
         ${study.description ? `<p class="sub">${esc(study.description)}</p>` : ''}
         <div class="invite">

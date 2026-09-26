@@ -72,6 +72,7 @@ function drawShell() {
           <h1>${esc(ROUTES[name].title)}</h1>
           <span class="sub desktop-only">${todayLabel()}</span>
           <div class="top-actions mobile-only">
+            ${name === 'home' ? '' : '<button class="live-pill" data-live hidden aria-label="진행 중인 타이머 열기"><span></span><b></b></button>'}
             <button class="btn icon" data-theme-toggle aria-label="다크/라이트 모드 전환">${themeIcon()}</button>
             <button class="btn icon" data-profile aria-label="내 정보"><span class="avatar" data-me-avatar style="width:32px;height:32px"></span></button>
           </div>
@@ -90,7 +91,7 @@ function drawShell() {
       })
   )
   $$('[data-profile]', root).forEach((btn) => (btn.onclick = () => openProfile(ctx, logout)))
-  $('[data-live]', root).onclick = () => openTimer(ctx, () => drawShell())
+  $$('[data-live]', root).forEach((btn) => (btn.onclick = () => openTimer(ctx, () => drawShell())))
   setBaseTitle(`${ROUTES[name].title} · proJect`)
   ROUTES[name].render($('main', root), ctx)
 }

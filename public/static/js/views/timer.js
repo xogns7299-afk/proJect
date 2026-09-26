@@ -90,7 +90,7 @@ export async function openTimer(ctx, onClose, initial) {
             <textarea data-memo rows="3" maxlength="1000" placeholder="예) 미적분 3단원 연습문제 1~30번">${esc(memoDraft)}</textarea>
             <span class="hint">끝나고 회고의 "오늘 공부한 내용"에 그대로 옮겨져요. 비워 둬도 됩니다.</span></label>
           <div class="error" role="alert"></div>
-          <div class="modal-foot">
+          <div class="modal-foot sticky-foot">
             <button class="btn" data-close>뒤로</button>
             <button class="btn primary" data-start ${selectedId ? '' : 'disabled'}>타이머 시작</button>
           </div>
@@ -177,11 +177,11 @@ export async function openTimer(ctx, onClose, initial) {
           <div class="card kindline"><span class="grow"><b>${esc(timer.subject)}</b>${timer.memo ? ` <span class="sub">· ${esc(timer.memo)}</span>` : ''}</span><span class="sub">${kstTime(timer.startedAt)} 시작</span></div>
           ${photoRowHtml('오공시 사진', 'start', timer.startPhoto && `/api/photos/${timer.startPhoto}`)}
           <div class="error" role="alert"></div>
-          <div class="controls">
+          <p class="hint">이 화면을 닫거나 다른 탭으로 가도 타이머는 서버에서 계속 돌아가요. 브라우저 탭 제목과 메뉴에 시간이 보여요.</p>
+          <div class="controls sticky-foot">
             <button class="btn big ${paused ? 'primary' : 'warn'}" data-pause>${paused ? '공부 재개' : '일시정지'}</button>
             <button class="btn big danger" data-stop>공부 종료</button>
           </div>
-          <p class="hint">이 화면을 닫거나 다른 탭으로 가도 타이머는 서버에서 계속 돌아가요. 브라우저 탭 제목과 왼쪽 메뉴에 시간이 보여요.</p>
         </div>
       </div>`,
       closeBtn('타이머 켜 둔 채 나가기')
@@ -315,7 +315,7 @@ export async function openTimer(ctx, onClose, initial) {
         <form class="card form">
           ${reviewFieldsHtml({ memo: r.memo })}
           <div class="error" role="alert"></div>
-          <div class="modal-foot"><button type="button" class="btn" data-later>나중에 쓰기</button><button class="btn primary">회고 저장</button></div>
+          <div class="modal-foot sticky-foot"><button type="button" class="btn" data-later>나중에 쓰기</button><button class="btn primary">회고 저장</button></div>
         </form>
       </div>`
     )

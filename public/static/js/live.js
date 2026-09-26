@@ -26,21 +26,22 @@ export function liveElapsed() {
 }
 
 function paint() {
-  const box = document.querySelector('[data-live]')
+  // 왼쪽 메뉴(PC)와 상단 알약(좁은 창) 두 곳에 있다
+  const boxes = document.querySelectorAll('[data-live]')
   if (!state) {
     document.title = baseTitle
-    if (box) box.hidden = true
+    boxes.forEach((box) => (box.hidden = true))
     return
   }
   const { timer } = state
   const paused = timer.status === 'paused'
   const clock = fmtClock(liveElapsed())
   document.title = paused ? `⏸ ${timer.subject} 쉬는 중 · proJect` : `⏱ ${clock} ${timer.subject} · proJect`
-  if (box) {
+  boxes.forEach((box) => {
     box.hidden = false
     box.classList.toggle('paused', paused)
     box.querySelector('span').textContent = `${timer.subject} ${paused ? '쉬는 중' : '공부 중'}`
-    box.querySelector('b').textContent = clock
-  }
+    box.querySelector('b').textContent = paused ? `⏸ ${clock}` : `⏱ ${clock}`
+  })
   document.querySelectorAll('[data-live-clock]').forEach((el) => (el.textContent = clock))
 }
