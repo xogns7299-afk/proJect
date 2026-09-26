@@ -203,6 +203,7 @@ npm run dev               # 개발 서버 → http://localhost:5173
 - [기획서](docs/기획서.md) · [기능명세](docs/기능명세.md) · [데이터 모델](docs/데이터모델.md) · [서버 API](docs/API.md)
 - [기술 스택 결정](docs/기술스택.md) · [대회 정보](docs/대회정보.md) · [시연 데이터](docs/시연데이터.md)
 - [팀 공유 — 프로젝트 진행 정리](docs/팀공유_프로젝트_진행정리.md)
+- [변경 기록 (버전별)](CHANGELOG.md) · [릴리스](https://github.com/xogns7299-afk/proJect/releases)
 
 ## 라이선스와 사용한 오픈소스
 
